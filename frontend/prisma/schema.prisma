@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum MediaType {
+  MOVIE
+  TV
+  VARIETY
+  GAME
+  ANIME
+  MANGA
+  BOOK
+}
+
+enum WatchStatus {
+  WANT
+  IN_PROGRESS
+  COMPLETED
+  DROPPED
+  ON_HOLD
+}
+
+enum PlexStatus {
+  IN_LIBRARY
+  DELETED
+}
+
+model MediaItem {
+  id             String       @id @default(cuid())
+  mediaType      MediaType
+  title          String
+  originalTitle  String?
+  coverLocalPath String?
+  description    String?
+  releaseYear    Int?
+  genres         String       @default("[]")
+  status         WatchStatus
+  myRating       Float?
+  myReview       String?
+  watchedAt      DateTime?
+  imdbId         String?
+  tmdbId         String?
+  bangumiId      String?
+  igdbId         String?
+  malId          String?
+  isbn           String?
+  plexRatingKey  String?
+  plexStatus     PlexStatus?
+  plexSyncedAt   DateTime?
+  extraData      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  activityLogs   ActivityLog[]
+  downloadTasks  DownloadTask[]
+
+  @@index([mediaType])
+  @@index([status])
+  @@index([plexStatus])
+  @@index([releaseYear])
+  @@index([createdAt])
+}
+
+model ActivityLog {
+  id        String    @id @default(cuid())
+  itemId    String
+  action    String
+  oldValue  String?
+  newValue  String?
+  createdAt DateTime  @default(now())
+  item      MediaItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@index([createdAt])
+}
+
+model PtSubscription {
+  id          String   @id @default(cuid())
+  name        String
+  rssUrl      String
+  filterRules String?
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model DownloadTask {
+  id          String    @id @default(cuid())
+  itemId      String
+  torrentName String
+  filePath    String?
+  status      String
+  createdAt   DateTime  @default(now())
+  item        MediaItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@index([status])
+}
