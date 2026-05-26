@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Search, Save, X } from "lucide-react";
+import { CheckCircle2, Download, ImagePlus, Search, Save, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/field";
 import { MEDIA_TYPE_LABELS, PLEX_STATUS_LABELS, WATCH_STATUS_LABELS, mediaTypes, plexStatuses, watchStatuses } from "@/lib/media";
@@ -17,21 +17,160 @@ function splitGenres(value: string) {
   return value.split(",").map((item) => item.trim()).filter(Boolean);
 }
 
-export function ItemForm({ item, onDone }: { item?: MediaItemView; onDone?: () => void }) {
+const ratingLabels = ["很差", "较差", "还行", "推荐", "力荐"];
+
+function StarRatingInput({ defaultValue }: { defaultValue?: number | null }) {
+  const [rating, setRating] = useState(defaultValue ?? 0);
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
+  const previewRating = hoverRating ?? rating;
+  const label = previewRating > 0 ? ratingLabels[Math.ceil(previewRating / 2) - 1] : "未评分";
+
+  return (
+    <div className="space-y-2">
+      <input type="hidden" name="myRating" value={rating ? String(rating) : ""} />
+      <div className="flex items-center gap-3">
+        <div
+          className="flex items-center gap-1"
+          onMouseLeave={() => setHoverRating(null)}
+          aria-label="评分"
+        >
+          {[1, 2, 3, 4, 5].map((star) => {
+            const fill = Math.max(0, Math.min(2, previewRating - (star - 1) * 2)) * 50;
+
+            return (
+              <span key={star} className="relative h-8 w-8 text-[32px] leading-8">
+                <span className="absolute inset-0 text-zinc-700">★</span>
+                <span className="absolute inset-y-0 left-0 overflow-hidden text-amber-300" style={{ width: `${fill}%` }}>
+                  ★
+                </span>
+                <button
+                  type="button"
+                  className="absolute inset-y-0 left-0 w-1/2 cursor-pointer"
+                  aria-label={`${star - 0.5} 星`}
+                  onMouseEnter={() => setHoverRating(star * 2 - 1)}
+                  onFocus={() => setHoverRating(star * 2 - 1)}
+                  onBlur={() => setHoverRating(null)}
+                  onClick={() => setRating(star * 2 - 1)}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 w-1/2 cursor-pointer"
+                  aria-label={`${star} 星`}
+                  onMouseEnter={() => setHoverRating(star * 2)}
+                  onFocus={() => setHoverRating(star * 2)}
+                  onBlur={() => setHoverRating(null)}
+                  onClick={() => setRating(star * 2)}
+                />
+              </span>
+            );
+          })}
+        </div>
+        <span className="min-w-24 text-sm text-zinc-300">
+          {previewRating ? `${label} · ${previewRating}/10` : label}
+        </span>
+      </div>
+      {rating ? (
+        <button type="button" className="text-xs text-zinc-500 hover:text-zinc-300" onClick={() => setRating(0)}>
+          清除评分
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+export function ItemForm({
+  item,
+  onDone,
+  formId,
+  hideActions = false,
+}: {
+  item?: MediaItemView;
+  onDone?: () => void;
+  formId?: string;
+  hideActions?: boolean;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [coverPath, setCoverPath] = useState(item?.coverLocalPath ?? "");
+  const [coverPreviewError, setCoverPreviewError] = useState(false);
+
+  async function uploadCover(file: File) {
+    if (file.size === 0) {
+      return coverPath;
+    }
+
+    setUploading(true);
+    const uploadData = new FormData();
+    uploadData.append("file", file);
+
+    const response = await fetch("/api/uploads/cover", {
+      method: "POST",
+      body: uploadData,
+    });
+    setUploading(false);
+
+    if (!response.ok) {
+      throw new Error("封面上传失败，请确认图片格式和大小。");
+    }
+
+    const result = (await response.json()) as { path: string };
+    setCoverPreviewError(false);
+    setCoverPath(result.path);
+    return result.path;
+  }
+
+  async function importCoverUrl() {
+    const sourceUrl = coverPath.trim();
+    if (!sourceUrl) {
+      setError("请先填写图片 URL。");
+      return coverPath;
+    }
+
+    setUploading(true);
+    const response = await fetch("/api/uploads/cover", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: sourceUrl }),
+    });
+    setUploading(false);
+
+    if (!response.ok) {
+      throw new Error("图片 URL 导入失败，请确认地址可访问且格式为 JPG、PNG、WebP 或 GIF。");
+    }
+
+    const result = (await response.json()) as { path: string };
+    setCoverPreviewError(false);
+    setCoverPath(result.path);
+    return result.path;
+  }
 
   async function onSubmit(formData: FormData) {
     setSaving(true);
     setError(null);
+    setSuccess(false);
+
+    let nextCoverPath = coverPath;
+    const coverFile = formData.get("coverFile");
+
+    try {
+      if (coverFile instanceof File && coverFile.size > 0) {
+        nextCoverPath = await uploadCover(coverFile);
+      }
+    } catch (uploadError) {
+      setSaving(false);
+      setError(uploadError instanceof Error ? uploadError.message : "封面上传失败。");
+      return;
+    }
 
     const data = {
       title: String(formData.get("title") || ""),
       mediaType: String(formData.get("mediaType") || "MOVIE"),
       status: String(formData.get("status") || "WANT"),
       originalTitle: String(formData.get("originalTitle") || ""),
-      coverLocalPath: String(formData.get("coverLocalPath") || ""),
+      coverLocalPath: nextCoverPath,
       description: String(formData.get("description") || ""),
       releaseYear: String(formData.get("releaseYear") || ""),
       genres: splitGenres(String(formData.get("genres") || "")),
@@ -62,6 +201,8 @@ export function ItemForm({ item, onDone }: { item?: MediaItemView; onDone?: () =
     }
 
     const saved = await response.json();
+    setSuccess(true);
+    window.setTimeout(() => setSuccess(false), 3200);
     router.refresh();
     onDone?.();
     if (!item) router.push("/items/" + saved.id);
@@ -69,7 +210,8 @@ export function ItemForm({ item, onDone }: { item?: MediaItemView; onDone?: () =
   }
 
   return (
-    <form action={onSubmit} className="space-y-5">
+    <>
+    <form id={formId} action={onSubmit} className="space-y-5">
       <div className="grid gap-4 md:grid-cols-3">
         <div className="md:col-span-2 space-y-2">
           <Label htmlFor="title">标题 *</Label>
@@ -100,7 +242,7 @@ export function ItemForm({ item, onDone }: { item?: MediaItemView; onDone?: () =
         </div>
         <div className="space-y-2">
           <Label htmlFor="myRating">评分</Label>
-          <Input id="myRating" name="myRating" type="number" min="1" max="10" step="0.5" defaultValue={item?.myRating ?? ""} />
+          <StarRatingInput defaultValue={item?.myRating} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="watchedAt">完成日期</Label>
@@ -117,9 +259,60 @@ export function ItemForm({ item, onDone }: { item?: MediaItemView; onDone?: () =
           <Label htmlFor="genres">类型标签</Label>
           <Input id="genres" name="genres" defaultValue={parseJsonArray(item?.genres).join(", ")} placeholder="科幻, 剧情" />
         </div>
-        <div className="space-y-2 md:col-span-3">
-          <Label htmlFor="coverLocalPath">封面路径</Label>
-          <Input id="coverLocalPath" name="coverLocalPath" defaultValue={item?.coverLocalPath ?? ""} placeholder="/covers/example.jpg 或图片 URL" />
+        <div className="space-y-3 md:col-span-3">
+          <Label htmlFor="coverLocalPath">封面图片</Label>
+          <div className="grid gap-3 md:grid-cols-[140px_1fr]">
+            <div className="aspect-[2/3] overflow-hidden rounded-md border border-white/10 bg-zinc-950">
+              {coverPath && !coverPreviewError ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={coverPath} alt="封面预览" className="h-full w-full object-cover" onError={() => setCoverPreviewError(true)} />
+              ) : coverPreviewError ? (
+                <div className="flex h-full flex-col items-center justify-center gap-2 px-3 text-center text-xs text-zinc-500">
+                  <ImagePlus size={22} />
+                  远程图片无法直连预览，请点击导入 URL
+                </div>
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-2 text-xs text-zinc-500">
+                  <ImagePlus size={22} />
+                  暂无封面
+                </div>
+              )}
+            </div>
+            <div className="space-y-3">
+              <Input id="coverLocalPath" name="coverLocalPath" value={coverPath} onChange={(event) => { setCoverPreviewError(false); setCoverPath(event.target.value); }} placeholder="上传图片后自动填入，也可填写图片 URL" />
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input id="coverFile" name="coverFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="file:mr-3 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-1 file:text-sm file:text-zinc-100" />
+                <Button variant="secondary" disabled={uploading} onClick={async () => {
+                  const input = document.getElementById("coverFile") as HTMLInputElement | null;
+                  const file = input?.files?.[0];
+                  if (!file) {
+                    setError("请先选择一张图片。");
+                    return;
+                  }
+                  try {
+                    setError(null);
+                    await uploadCover(file);
+                    input.value = "";
+                  } catch (uploadError) {
+                    setError(uploadError instanceof Error ? uploadError.message : "封面上传失败。");
+                  }
+                }}>
+                  <Upload size={16} />{uploading ? "上传中" : "上传"}
+                </Button>
+                <Button variant="secondary" disabled={uploading} onClick={async () => {
+                  try {
+                    setError(null);
+                    await importCoverUrl();
+                  } catch (uploadError) {
+                    setError(uploadError instanceof Error ? uploadError.message : "图片 URL 导入失败。");
+                  }
+                }}>
+                  <Download size={16} />导入 URL
+                </Button>
+              </div>
+              <p className="text-xs text-zinc-500">支持本地上传或从图片 URL 导入 JPG、PNG、WebP、GIF，最大 5MB。</p>
+            </div>
+          </div>
         </div>
         <div className="space-y-2 md:col-span-3">
           <Label htmlFor="myReview">短评</Label>
@@ -152,11 +345,20 @@ export function ItemForm({ item, onDone }: { item?: MediaItemView; onDone?: () =
       </div>
 
       {error ? <p className="text-sm text-red-300">{error}</p> : null}
-      <div className="flex justify-end gap-2">
-        {onDone ? <Button variant="ghost" onClick={onDone}><X size={16} />取消</Button> : null}
-        <Button type="submit" disabled={saving}><Save size={16} />{saving ? "保存中" : "保存"}</Button>
-      </div>
+      {!hideActions ? (
+        <div className="flex justify-end gap-2">
+          {onDone ? <Button variant="ghost" onClick={onDone}><X size={16} />取消</Button> : null}
+          <Button type="submit" disabled={saving || uploading}><Save size={16} />{saving ? "保存中" : "保存"}</Button>
+        </div>
+      ) : null}
     </form>
+    {success ? (
+      <div className="fixed bottom-6 left-6 z-50 flex items-center gap-3 rounded-lg border border-emerald-300/40 bg-emerald-500 px-5 py-4 text-base font-semibold text-white shadow-2xl shadow-emerald-950/40">
+        <CheckCircle2 size={26} />
+        保存成功，条目已更新
+      </div>
+    ) : null}
+    </>
   );
 }
 

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 import { DeleteItemButton } from "@/components/delete-item-button";
 import { ItemForm } from "@/components/item-form";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
 import { MEDIA_TYPE_LABELS, PLEX_STATUS_LABELS, WATCH_STATUS_LABELS, plexClassName, statusClassName } from "@/lib/media";
 import { parseJsonArray } from "@/lib/utils";
@@ -18,13 +19,17 @@ export default async function ItemDetailPage({ params }: PageProps) {
 
   const view = serializeItem(item);
   const genres = parseJsonArray(view.genres);
+  const editFormId = `item-edit-form-${view.id}`;
 
   return (
     <main className="min-h-screen bg-[#09090b] text-zinc-100">
       <div className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
         <div className="mb-6 flex items-center justify-between">
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white"><ArrowLeft size={16} />返回列表</Link>
-          <DeleteItemButton id={view.id} />
+          <div className="flex items-center gap-2">
+            <Button type="submit" form={editFormId}><Save size={16} />保存</Button>
+            <DeleteItemButton id={view.id} />
+          </div>
         </div>
 
         <section className="grid gap-6 lg:grid-cols-[320px_1fr]">
@@ -65,7 +70,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
 
             <div className="rounded-lg border border-white/10 bg-zinc-950/70 p-5">
               <h2 className="mb-5 text-lg font-semibold text-white">编辑条目</h2>
-              <ItemForm item={view} />
+              <ItemForm item={view} formId={editFormId} hideActions />
             </div>
           </div>
         </section>
