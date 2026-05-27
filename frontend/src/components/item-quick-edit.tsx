@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CheckCircle2, Star, X } from "lucide-react";
+import { CheckCircle2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label, Select, Textarea } from "@/components/ui/field";
 import { PLEX_STATUS_LABELS, plexStatuses } from "@/lib/media";
@@ -20,6 +20,7 @@ const gameStatusLabels: Record<"WANT" | "IN_PROGRESS" | "COMPLETED", string> = {
   COMPLETED: "玩过",
 };
 const editableStatuses = ["WANT", "IN_PROGRESS", "COMPLETED"] as const;
+const visibleActionStatuses = ["IN_PROGRESS", "COMPLETED"] as const;
 
 type EditableStatus = (typeof editableStatuses)[number];
 
@@ -55,6 +56,24 @@ function StarRatingControl({ value, onChange, compact = false }: { value: number
   );
 }
 
+function StarRatingDisplay({ value }: { value: number }) {
+  if (!value) return <span className="text-sm text-zinc-400">点击评分</span>;
+
+  return (
+    <span className="flex items-center gap-0.5" aria-label={"评分 " + value + " 分"}>
+      {[1, 2, 3, 4, 5].map((star) => {
+        const fill = Math.max(0, Math.min(2, value - (star - 1) * 2)) * 50;
+        return (
+          <span key={star} className="relative h-5 w-5 text-[20px] leading-5">
+            <span className="absolute inset-0 text-zinc-700">★</span>
+            <span className="absolute inset-y-0 left-0 overflow-hidden text-amber-300" style={{ width: fill + "%" }}>★</span>
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 export function ItemQuickEdit({ item }: { item: MediaItemView }) {
   const router = useRouter();
   const initialStatus: EditableStatus = editableStatuses.includes(item.status as EditableStatus) ? item.status as EditableStatus : "WANT";
@@ -84,7 +103,7 @@ export function ItemQuickEdit({ item }: { item: MediaItemView }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         status,
-        plexStatus: plexStatus || null,
+        plexStatus: item.mediaType === "GAME" ? null : plexStatus || null,
         myRating: rating ? String(rating) : "",
         myReview: review,
         watchedAt: status === "COMPLETED" ? new Date().toISOString().slice(0, 10) : item.watchedAt ?? "",
@@ -108,19 +127,19 @@ export function ItemQuickEdit({ item }: { item: MediaItemView }) {
     <>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
-          {editableStatuses.map((nextStatus) => (
+          {visibleActionStatuses.map((nextStatus) => (
             <button
               type="button"
               key={nextStatus}
               onClick={() => openReviewDialog(nextStatus)}
-              className={(status === nextStatus ? "border-amber-300 bg-amber-300 text-zinc-950" : "border-white/10 bg-white/5 text-zinc-200 hover:bg-white/10") + " rounded-md border px-4 py-2 text-sm font-medium transition"}
+              className={(status === nextStatus ? "border-amber-300 bg-amber-300 text-zinc-950" : "border-amber-300/40 bg-amber-400/10 text-amber-100 hover:bg-amber-400/20") + " rounded-md border px-4 py-2 text-sm font-medium transition"}
             >
               {labelForStatus(item, nextStatus)}
             </button>
           ))}
           <span className="ml-0 text-sm text-zinc-500 sm:ml-2">评价：</span>
-          <button type="button" onClick={() => openReviewDialog(undefined, rating || 8)} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm text-zinc-300 hover:bg-white/10">
-            <Star size={16} className="text-amber-300" />{rating ? rating + "/10" : "点击评分"}
+          <button type="button" onClick={() => openReviewDialog(undefined, rating || 8)} className="inline-flex min-h-8 items-center rounded-md px-2 py-1 hover:bg-white/10">
+            <StarRatingDisplay value={rating} />
           </button>
         </div>
         {item.myReview ? <p className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm leading-6 text-zinc-300">{item.myReview}</p> : null}
@@ -141,13 +160,15 @@ export function ItemQuickEdit({ item }: { item: MediaItemView }) {
                     {editableStatuses.map((nextStatus) => <option key={nextStatus} value={nextStatus}>{labelForStatus(item, nextStatus)}</option>)}
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="review-plex-status">Plex 状态</Label>
-                  <Select id="review-plex-status" value={plexStatus} onChange={(event) => setPlexStatus(event.target.value)}>
-                    <option value="">未关联</option>
-                    {plexStatuses.map((nextStatus) => <option key={nextStatus} value={nextStatus}>{PLEX_STATUS_LABELS[nextStatus]}</option>)}
-                  </Select>
-                </div>
+                {item.mediaType !== "GAME" ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="review-plex-status">Plex 状态</Label>
+                    <Select id="review-plex-status" value={plexStatus} onChange={(event) => setPlexStatus(event.target.value)}>
+                      <option value="">未关联</option>
+                      {plexStatuses.map((nextStatus) => <option key={nextStatus} value={nextStatus}>{PLEX_STATUS_LABELS[nextStatus]}</option>)}
+                    </Select>
+                  </div>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <Label>评分（可选）</Label>

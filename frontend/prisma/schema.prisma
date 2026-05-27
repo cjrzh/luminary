@@ -30,6 +30,11 @@ enum PlexStatus {
   DELETED
 }
 
+enum GamePurchaseStatus {
+  PURCHASED
+  NOT_PURCHASED
+}
+
 model MediaItem {
   id             String       @id @default(cuid())
   mediaType      MediaType
@@ -58,12 +63,64 @@ model MediaItem {
   updatedAt      DateTime     @updatedAt
   activityLogs   ActivityLog[]
   downloadTasks  DownloadTask[]
+  collections    CollectionItem[]
+  gameProfile    GameProfile?
 
   @@index([mediaType])
   @@index([status])
   @@index([plexStatus])
   @@index([releaseYear])
   @@index([createdAt])
+}
+
+model GameProfile {
+  id                     String              @id @default(cuid())
+  itemId                 String              @unique
+  purchaseStatus         GamePurchaseStatus?
+  primaryPlatform        String?
+  ownedPlatforms         String              @default("[]")
+  normalPriceCny         Float?
+  steamAppId             String?
+  psnTitleId             String?
+  psnConceptId           String?
+  switchTitleId          String?
+  playtimeForeverMinutes Int?
+  playtime2WeeksMinutes  Int?
+  lastPlayedAt           DateTime?
+  externalIds            String?
+  extraData              String?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  item                   MediaItem           @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([steamAppId])
+  @@index([psnTitleId])
+  @@index([switchTitleId])
+}
+
+model Collection {
+  id          String           @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  items       CollectionItem[]
+
+  @@index([createdAt])
+}
+
+model CollectionItem {
+  id           String     @id @default(cuid())
+  collectionId String
+  itemId       String
+  sortOrder    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  item         MediaItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, itemId])
+  @@index([collectionId, sortOrder])
+  @@index([itemId])
 }
 
 model ActivityLog {

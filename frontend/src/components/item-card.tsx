@@ -18,12 +18,7 @@ export function ItemCard({ item }: { item: MediaItemView }) {
             {MEDIA_TYPE_LABELS[item.mediaType]}
           </div>
         )}
-        <div className="absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-black via-black/70 to-transparent p-3 opacity-0 transition group-hover:translate-y-0 group-hover:opacity-100">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-amber-200">{item.myRating ? item.myRating.toFixed(1) + " / 10" : "未评分"}</span>
-            <Badge className={statusClassName[item.status]}>{item.mediaType === "GAME" && item.status === "WANT" ? "想玩" : item.mediaType === "GAME" && item.status === "IN_PROGRESS" ? "在玩" : item.mediaType === "GAME" && item.status === "COMPLETED" ? "玩过" : WATCH_STATUS_LABELS[item.status]}</Badge>
-          </div>
-        </div>
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/80 to-transparent opacity-0 transition group-hover:opacity-100" />
       </div>
       <div className="space-y-2 p-3">
         <div className="flex items-start justify-between gap-2">
@@ -33,6 +28,10 @@ export function ItemCard({ item }: { item: MediaItemView }) {
         <div className="flex items-center justify-between text-xs text-zinc-400">
           <span>{item.releaseYear ?? "年份未知"}</span>
           <span>{genres.join(" / ") || MEDIA_TYPE_LABELS[item.mediaType]}</span>
+        </div>
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <span className="font-medium text-amber-200">{item.myRating ? item.myRating.toFixed(1) + " / 10" : "未评分"}</span>
+          <Badge className={statusClassName[item.status]}>{item.mediaType === "GAME" && item.status === "WANT" ? "想玩" : item.mediaType === "GAME" && item.status === "IN_PROGRESS" ? "在玩" : item.mediaType === "GAME" && item.status === "COMPLETED" ? "玩过" : WATCH_STATUS_LABELS[item.status]}</Badge>
         </div>
       </div>
     </Link>

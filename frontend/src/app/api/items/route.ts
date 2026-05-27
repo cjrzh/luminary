@@ -16,6 +16,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const item = await prisma.mediaItem.create({ data: toPrismaData(parsed.data) });
+  const item = await prisma.mediaItem.create({ data: toPrismaData(parsed.data), include: { gameProfile: true } });
   return NextResponse.json(item, { status: 201 });
 }

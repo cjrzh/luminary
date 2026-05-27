@@ -6,7 +6,7 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_request: NextRequest, { params }: Params) {
   const { id } = await params;
-  const item = await prisma.mediaItem.findUnique({ where: { id } });
+  const item = await prisma.mediaItem.findUnique({ where: { id }, include: { gameProfile: true } });
 
   if (!item) {
     return NextResponse.json({ error: "Item not found" }, { status: 404 });
@@ -25,9 +25,19 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   }
 
   try {
-    const item = await prisma.mediaItem.update({
-      where: { id },
-      data: toPrismaUpdateData(parsed.data),
+    const item = await prisma.$transaction(async (tx) => {
+      const updated = await tx.mediaItem.update({
+        where: { id },
+        data: toPrismaUpdateData(parsed.data),
+        include: { gameProfile: true },
+      });
+
+      if (parsed.data.mediaType && parsed.data.mediaType !== "GAME") {
+        await tx.gameProfile.deleteMany({ where: { itemId: id } });
+        return tx.mediaItem.findUniqueOrThrow({ where: { id }, include: { gameProfile: true } });
+      }
+
+      return updated;
     });
     return NextResponse.json(item);
   } catch {

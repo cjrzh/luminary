@@ -5,7 +5,7 @@ import { useState } from "react";
 import { CheckCircle2, Download, ImagePlus, Search, Save, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/field";
-import { MEDIA_TYPE_LABELS, PLEX_STATUS_LABELS, WATCH_STATUS_LABELS, mediaTypes, plexStatuses, watchStatuses } from "@/lib/media";
+import { GAME_PURCHASE_STATUS_LABELS, MEDIA_TYPE_LABELS, PLEX_STATUS_LABELS, WATCH_STATUS_LABELS, gamePurchaseStatuses, mediaTypes, plexStatuses, watchStatuses } from "@/lib/media";
 import { parseJsonArray } from "@/lib/utils";
 import type { MediaItemView } from "@/lib/types";
 
@@ -18,6 +18,7 @@ function splitGenres(value: string) {
 }
 
 const ratingLabels = ["很差", "较差", "还行", "推荐", "力荐"];
+const gamePlatformOptions = ["PS5", "Steam", "Switch"] as const;
 
 function StarRatingInput({ defaultValue }: { defaultValue?: number | null }) {
   const [rating, setRating] = useState(defaultValue ?? 0);
@@ -98,6 +99,7 @@ export function ItemForm({
   const [uploading, setUploading] = useState(false);
   const [coverPath, setCoverPath] = useState(item?.coverLocalPath ?? "");
   const [coverPreviewError, setCoverPreviewError] = useState(false);
+  const [mediaType, setMediaType] = useState(item?.mediaType ?? "MOVIE");
 
   async function uploadCover(file: File) {
     if (file.size === 0) {
@@ -188,6 +190,19 @@ export function ItemForm({
       isbn: String(formData.get("isbn") || ""),
       plexRatingKey: String(formData.get("plexRatingKey") || ""),
       plexStatus: String(formData.get("plexStatus") || "") || null,
+      gamePurchaseStatus: String(formData.get("gamePurchaseStatus") || "") || null,
+      gamePrimaryPlatform: String(formData.get("gamePrimaryPlatform") || ""),
+      gameOwnedPlatforms: formData.getAll("gameOwnedPlatforms").map((value) => String(value)).filter(Boolean),
+      gameNormalPriceCny: String(formData.get("gameNormalPriceCny") || ""),
+      steamAppId: String(formData.get("steamAppId") || ""),
+      psnTitleId: String(formData.get("psnTitleId") || ""),
+      psnConceptId: String(formData.get("psnConceptId") || ""),
+      switchTitleId: String(formData.get("switchTitleId") || ""),
+      playtimeForeverMinutes: String(formData.get("playtimeForeverMinutes") || ""),
+      playtime2WeeksMinutes: String(formData.get("playtime2WeeksMinutes") || ""),
+      lastPlayedAt: String(formData.get("lastPlayedAt") || ""),
+      gameExternalIds: String(formData.get("gameExternalIds") || ""),
+      gameExtraData: String(formData.get("gameExtraData") || ""),
       extraData: String(formData.get("extraData") || ""),
     };
 
@@ -230,7 +245,7 @@ export function ItemForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="mediaType">媒体类型 *</Label>
-          <Select id="mediaType" name="mediaType" defaultValue={item?.mediaType ?? "MOVIE"} required>
+          <Select id="mediaType" name="mediaType" value={mediaType} onChange={(event) => setMediaType(event.target.value as typeof mediaType)} required>
             {mediaTypes.map((type) => <option key={type} value={type}>{MEDIA_TYPE_LABELS[type]}</option>)}
           </Select>
         </div>
@@ -252,17 +267,107 @@ export function ItemForm({
           <Label htmlFor="watchedAt">完成日期</Label>
           <Input id="watchedAt" name="watchedAt" type="date" defaultValue={dateValue(item?.watchedAt)} />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="plexStatus">Plex 状态</Label>
-          <Select id="plexStatus" name="plexStatus" defaultValue={item?.plexStatus ?? ""}>
-            <option value="">未关联</option>
-            {plexStatuses.map((status) => <option key={status} value={status}>{PLEX_STATUS_LABELS[status]}</option>)}
-          </Select>
-        </div>
+        {mediaType !== "GAME" ? (
+          <div className="space-y-2">
+            <Label htmlFor="plexStatus">Plex 状态</Label>
+            <Select id="plexStatus" name="plexStatus" defaultValue={item?.plexStatus ?? ""}>
+              <option value="">未关联</option>
+              {plexStatuses.map((status) => <option key={status} value={status}>{PLEX_STATUS_LABELS[status]}</option>)}
+            </Select>
+          </div>
+        ) : null}
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="genres">类型标签</Label>
           <Input id="genres" name="genres" defaultValue={parseJsonArray(item?.genres).join(", ")} placeholder="科幻, 剧情" />
         </div>
+        {mediaType === "GAME" ? (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="gamePurchaseStatus">购买状态</Label>
+              <Select id="gamePurchaseStatus" name="gamePurchaseStatus" defaultValue={item?.gameProfile?.purchaseStatus ?? "NOT_PURCHASED"}>
+                {gamePurchaseStatuses.map((status) => <option key={status} value={status}>{GAME_PURCHASE_STATUS_LABELS[status]}</option>)}
+              </Select>
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>游戏平台</Label>
+              <div className="flex flex-wrap gap-2">
+                {gamePlatformOptions.map((platform) => (
+                  <label key={platform} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-white/10 bg-zinc-950/70 px-3 text-sm text-zinc-100 transition hover:border-amber-300/50">
+                    <input
+                      type="checkbox"
+                      name="gameOwnedPlatforms"
+                      value={platform}
+                      defaultChecked={parseJsonArray(item?.gameProfile?.ownedPlatforms).includes(platform)}
+                      className="h-4 w-4 accent-amber-300"
+                    />
+                    {platform}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gameNormalPriceCny">日常价格（人民币）</Label>
+              <Input id="gameNormalPriceCny" name="gameNormalPriceCny" type="number" min="0" step="0.01" defaultValue={item?.gameProfile?.normalPriceCny ?? ""} placeholder="非折扣价" />
+            </div>
+            <div className="space-y-2 md:col-span-3">
+              <Label>已拥有平台</Label>
+              <div className="flex flex-wrap gap-2">
+                {gamePlatformOptions.map((platform) => (
+                  <label key={platform} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-white/10 bg-zinc-950/70 px-3 text-sm text-zinc-100 transition hover:border-amber-300/50">
+                    <input
+                      type="radio"
+                      name="gamePrimaryPlatform"
+                      value={platform}
+                      defaultChecked={item?.gameProfile?.primaryPlatform === platform}
+                      className="h-4 w-4 accent-amber-300"
+                    />
+                    {platform}
+                  </label>
+                ))}
+                <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-white/10 bg-zinc-950/70 px-3 text-sm text-zinc-100 transition hover:border-amber-300/50">
+                  <input type="radio" name="gamePrimaryPlatform" value="" defaultChecked={!item?.gameProfile?.primaryPlatform} className="h-4 w-4 accent-amber-300" />
+                  未购买
+                </label>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="steamAppId">Steam App ID</Label>
+              <Input id="steamAppId" name="steamAppId" defaultValue={item?.gameProfile?.steamAppId ?? ""} placeholder="例如 1174180" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="psnTitleId">PSN Title ID</Label>
+              <Input id="psnTitleId" name="psnTitleId" defaultValue={item?.gameProfile?.psnTitleId ?? ""} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="switchTitleId">Switch Title ID</Label>
+              <Input id="switchTitleId" name="switchTitleId" defaultValue={item?.gameProfile?.switchTitleId ?? ""} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="psnConceptId">PSN Concept ID</Label>
+              <Input id="psnConceptId" name="psnConceptId" defaultValue={item?.gameProfile?.psnConceptId ?? ""} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="playtimeForeverMinutes">总游玩时长（分钟）</Label>
+              <Input id="playtimeForeverMinutes" name="playtimeForeverMinutes" type="number" min="0" step="1" defaultValue={item?.gameProfile?.playtimeForeverMinutes ?? ""} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="playtime2WeeksMinutes">近两周时长（分钟）</Label>
+              <Input id="playtime2WeeksMinutes" name="playtime2WeeksMinutes" type="number" min="0" step="1" defaultValue={item?.gameProfile?.playtime2WeeksMinutes ?? ""} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastPlayedAt">最后游玩时间</Label>
+              <Input id="lastPlayedAt" name="lastPlayedAt" type="date" defaultValue={dateValue(item?.gameProfile?.lastPlayedAt)} />
+            </div>
+            <div className="space-y-2 md:col-span-3">
+              <Label htmlFor="gameExternalIds">游戏外部 ID JSON</Label>
+              <Input id="gameExternalIds" name="gameExternalIds" defaultValue={item?.gameProfile?.externalIds ?? ""} placeholder='{"steam":"1174180","psn":"..."}' />
+            </div>
+            <div className="space-y-2 md:col-span-3">
+              <Label htmlFor="gameExtraData">游戏扩展数据 JSON</Label>
+              <Input id="gameExtraData" name="gameExtraData" defaultValue={item?.gameProfile?.extraData ?? ""} />
+            </div>
+          </>
+        ) : null}
         <div className="space-y-2 md:col-span-3">
           <Label htmlFor="sourceUrl">来源 URL</Label>
           <Input id="sourceUrl" name="sourceUrl" defaultValue={item?.sourceUrl ?? ""} placeholder="豆瓣、IMDb、TMDB 等条目页面 URL" />
@@ -332,20 +437,24 @@ export function ItemForm({
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-6">
-        {["imdbId", "tmdbId", "bangumiId", "igdbId", "malId", "isbn"].map((field) => (
-          <div className="space-y-2" key={field}>
-            <Label htmlFor={field}>{field}</Label>
-            <Input id={field} name={field} defaultValue={(item?.[field as keyof MediaItemView] as string | null) ?? ""} />
-          </div>
-        ))}
-      </div>
+      {mediaType !== "GAME" ? (
+        <div className="grid gap-4 md:grid-cols-6">
+          {["imdbId", "tmdbId", "bangumiId", "igdbId", "malId", "isbn"].map((field) => (
+            <div className="space-y-2" key={field}>
+              <Label htmlFor={field}>{field}</Label>
+              <Input id={field} name={field} defaultValue={(item?.[field as keyof MediaItemView] as string | null) ?? ""} />
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="plexRatingKey">plexRatingKey</Label>
-          <Input id="plexRatingKey" name="plexRatingKey" defaultValue={item?.plexRatingKey ?? ""} />
-        </div>
+        {mediaType !== "GAME" ? (
+          <div className="space-y-2">
+            <Label htmlFor="plexRatingKey">plexRatingKey</Label>
+            <Input id="plexRatingKey" name="plexRatingKey" defaultValue={item?.plexRatingKey ?? ""} />
+          </div>
+        ) : null}
         <div className="space-y-2">
           <Label htmlFor="extraData">extraData JSON</Label>
           <Input id="extraData" name="extraData" defaultValue={item?.extraData ?? ""} />

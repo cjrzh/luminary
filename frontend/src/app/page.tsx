@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Filter, Search } from "lucide-react";
+import { Filter, ListChecks, Search } from "lucide-react";
+import { UserAccount } from "@/components/auth/user-account";
 import { ItemCard } from "@/components/item-card";
 import { NewItemDialog } from "@/components/item-form";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +33,11 @@ export default async function Home({ searchParams }: PageProps) {
               <h1 className="text-2xl font-semibold tracking-normal text-white">Luminary</h1>
               <p className="text-sm text-zinc-400">个人娱乐内容档案</p>
             </div>
-            <NewItemDialog />
+            <div className="flex flex-wrap items-center gap-3">
+              <UserAccount />
+              <Link href="/collections" className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/10 px-4 text-sm font-medium text-zinc-100 transition hover:bg-white/15"><ListChecks size={16} />列表</Link>
+              <NewItemDialog />
+            </div>
           </div>
           <form className="flex flex-col gap-3 md:flex-row" action="/">
             <div className="relative flex-1">

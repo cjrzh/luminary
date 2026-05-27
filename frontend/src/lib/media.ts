@@ -1,6 +1,7 @@
 export type MediaType = "MOVIE" | "TV" | "VARIETY" | "GAME" | "ANIME" | "MANGA" | "BOOK";
 export type WatchStatus = "WANT" | "IN_PROGRESS" | "COMPLETED" | "DROPPED" | "ON_HOLD";
 export type PlexStatus = "IN_LIBRARY" | "DELETED";
+export type GamePurchaseStatus = "PURCHASED" | "NOT_PURCHASED";
 
 export const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
   MOVIE: "电影",
@@ -25,10 +26,16 @@ export const PLEX_STATUS_LABELS: Record<PlexStatus, string> = {
   DELETED: "已删除",
 };
 
+export const GAME_PURCHASE_STATUS_LABELS: Record<GamePurchaseStatus, string> = {
+  PURCHASED: "已购买",
+  NOT_PURCHASED: "未购买",
+};
+
 export const mediaTypes = ["MOVIE", "TV", "VARIETY", "GAME", "ANIME", "MANGA", "BOOK"] as const;
 export const watchStatuses = ["WANT", "IN_PROGRESS", "COMPLETED"] as const;
 export const allWatchStatuses = ["WANT", "IN_PROGRESS", "COMPLETED", "DROPPED", "ON_HOLD"] as const;
 export const plexStatuses = ["IN_LIBRARY", "DELETED"] as const;
+export const gamePurchaseStatuses = ["PURCHASED", "NOT_PURCHASED"] as const;
 
 export const statusClassName: Record<WatchStatus, string> = {
   WANT: "border-blue-400/30 bg-blue-500/15 text-blue-200",

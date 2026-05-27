@@ -1,4 +1,4 @@
-import type { MediaType, PlexStatus, WatchStatus } from "@/lib/media";
+import type { GamePurchaseStatus, MediaType, PlexStatus, WatchStatus } from "@/lib/media";
 
 export type MediaItemView = {
   id: string;
@@ -23,6 +23,27 @@ export type MediaItemView = {
   plexRatingKey: string | null;
   plexStatus: PlexStatus | null;
   plexSyncedAt: string | null;
+  gameProfile: GameProfileView | null;
+  extraData: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GameProfileView = {
+  id: string;
+  itemId: string;
+  purchaseStatus: GamePurchaseStatus | null;
+  primaryPlatform: string | null;
+  ownedPlatforms: string;
+  normalPriceCny: number | null;
+  steamAppId: string | null;
+  psnTitleId: string | null;
+  psnConceptId: string | null;
+  switchTitleId: string | null;
+  playtimeForeverMinutes: number | null;
+  playtime2WeeksMinutes: number | null;
+  lastPlayedAt: string | null;
+  externalIds: string | null;
   extraData: string | null;
   createdAt: string;
   updatedAt: string;

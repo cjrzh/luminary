@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { UserAccount } from "@/components/auth/user-account";
 import { ItemForm } from "@/components/item-form";
 import { prisma } from "@/lib/prisma";
 import { serializeItem } from "@/lib/serialize";
@@ -9,7 +10,7 @@ type PageProps = { params: Promise<{ id: string }> };
 
 export default async function ItemMetadataEditPage({ params }: PageProps) {
   const { id } = await params;
-  const item = await prisma.mediaItem.findUnique({ where: { id } });
+  const item = await prisma.mediaItem.findUnique({ where: { id }, include: { gameProfile: true } });
   if (!item) notFound();
 
   const view = serializeItem(item);
@@ -19,6 +20,7 @@ export default async function ItemMetadataEditPage({ params }: PageProps) {
       <div className="mx-auto max-w-6xl px-4 py-6 lg:px-6">
         <div className="mb-6 flex items-center justify-between">
           <Link href={"/items/" + view.id} className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white"><ArrowLeft size={16} />返回展示页</Link>
+          <UserAccount />
         </div>
         <section className="rounded-lg border border-white/10 bg-zinc-950/70 p-5">
           <div className="mb-5">
