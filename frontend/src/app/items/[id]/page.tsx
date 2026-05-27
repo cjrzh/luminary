@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, ExternalLink, Pencil } from "lucide-react";
 import { DeleteItemButton } from "@/components/delete-item-button";
-import { ItemForm } from "@/components/item-form";
+import { ItemQuickEdit } from "@/components/item-quick-edit";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
 import { MEDIA_TYPE_LABELS, PLEX_STATUS_LABELS, WATCH_STATUS_LABELS, plexClassName, statusClassName } from "@/lib/media";
 import { parseJsonArray } from "@/lib/utils";
@@ -19,7 +18,18 @@ export default async function ItemDetailPage({ params }: PageProps) {
 
   const view = serializeItem(item);
   const genres = parseJsonArray(view.genres);
-  const editFormId = `item-edit-form-${view.id}`;
+  const metadataRows = [
+  ["来源 URL", view.sourceUrl],
+  ["IMDb", view.imdbId],
+  ["TMDB", view.tmdbId],
+  ["Bangumi", view.bangumiId],
+  ["IGDB", view.igdbId],
+  ["MAL", view.malId],
+  ["ISBN", view.isbn],
+  ["Plex Rating Key", view.plexRatingKey],
+  ["Plex 同步时间", view.plexSyncedAt ? view.plexSyncedAt.slice(0, 10) : null],
+  ["扩展数据", view.extraData],
+] as const;
 
   return (
     <main className="min-h-screen bg-[#09090b] text-zinc-100">
@@ -27,7 +37,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
         <div className="mb-6 flex items-center justify-between">
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white"><ArrowLeft size={16} />返回列表</Link>
           <div className="flex items-center gap-2">
-            <Button type="submit" form={editFormId}><Save size={16} />保存</Button>
+            <Link href={"/items/" + view.id + "/edit"} className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/10 px-4 text-sm font-medium text-zinc-100 transition hover:bg-white/15"><Pencil size={16} />编辑</Link>
             <DeleteItemButton id={view.id} />
           </div>
         </div>
@@ -60,18 +70,28 @@ export default async function ItemDetailPage({ params }: PageProps) {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Badge className="border-white/10 bg-white/5 text-zinc-200">{MEDIA_TYPE_LABELS[view.mediaType]}</Badge>
-                  <Badge className={statusClassName[view.status]}>{WATCH_STATUS_LABELS[view.status]}</Badge>
+                  <Badge className={statusClassName[view.status]}>{view.mediaType === "GAME" && view.status === "WANT" ? "想玩" : view.mediaType === "GAME" && view.status === "IN_PROGRESS" ? "在玩" : view.mediaType === "GAME" && view.status === "COMPLETED" ? "玩过" : WATCH_STATUS_LABELS[view.status]}</Badge>
                   {view.releaseYear ? <Badge className="border-white/10 bg-white/5 text-zinc-300">{view.releaseYear}</Badge> : null}
                 </div>
               </div>
-              {view.description ? <p className="whitespace-pre-wrap text-sm leading-6 text-zinc-300">{view.description}</p> : <p className="text-sm text-zinc-500">暂无简介</p>}
+              <ItemQuickEdit item={view} />
+              {view.description ? <p className="mt-5 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{view.description}</p> : <p className="mt-5 text-sm text-zinc-500">暂无简介</p>}
               {genres.length ? <div className="mt-4 flex flex-wrap gap-2">{genres.map((genre) => <Badge key={genre} className="border-white/10 bg-white/5 text-zinc-300">{genre}</Badge>)}</div> : null}
             </div>
 
-            <div className="rounded-lg border border-white/10 bg-zinc-950/70 p-5">
-              <h2 className="mb-5 text-lg font-semibold text-white">编辑条目</h2>
-              <ItemForm item={view} formId={editFormId} hideActions />
-            </div>
+            <section className="rounded-lg border border-white/10 bg-zinc-950/70 p-5">
+              <h2 className="mb-4 text-lg font-semibold text-white">元数据</h2>
+              <dl className="grid gap-3 md:grid-cols-2">
+                {metadataRows.map(([label, value]) => value ? (
+                  <div key={label} className="rounded-md border border-white/10 bg-white/[0.03] p-3">
+                    <dt className="text-xs text-zinc-500">{label}</dt>
+                    <dd className="mt-1 break-words text-sm text-zinc-200">
+                      {label === "来源 URL" ? <a href={value} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-amber-200 hover:text-amber-100"><ExternalLink size={14} />{value}</a> : value}
+                    </dd>
+                  </div>
+                ) : null)}
+              </dl>
+            </section>
           </div>
         </section>
       </div>

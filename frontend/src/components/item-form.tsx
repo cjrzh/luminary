@@ -83,11 +83,13 @@ export function ItemForm({
   onDone,
   formId,
   hideActions = false,
+  redirectTo,
 }: {
   item?: MediaItemView;
   onDone?: () => void;
   formId?: string;
   hideActions?: boolean;
+  redirectTo?: string;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -171,6 +173,7 @@ export function ItemForm({
       status: String(formData.get("status") || "WANT"),
       originalTitle: String(formData.get("originalTitle") || ""),
       coverLocalPath: nextCoverPath,
+      sourceUrl: String(formData.get("sourceUrl") || ""),
       description: String(formData.get("description") || ""),
       releaseYear: String(formData.get("releaseYear") || ""),
       genres: splitGenres(String(formData.get("genres") || "")),
@@ -205,7 +208,8 @@ export function ItemForm({
     window.setTimeout(() => setSuccess(false), 3200);
     router.refresh();
     onDone?.();
-    if (!item) router.push("/items/" + saved.id);
+    if (redirectTo) router.push(redirectTo);
+    else if (!item) router.push("/items/" + saved.id);
     setSaving(false);
   }
 
@@ -258,6 +262,10 @@ export function ItemForm({
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="genres">类型标签</Label>
           <Input id="genres" name="genres" defaultValue={parseJsonArray(item?.genres).join(", ")} placeholder="科幻, 剧情" />
+        </div>
+        <div className="space-y-2 md:col-span-3">
+          <Label htmlFor="sourceUrl">来源 URL</Label>
+          <Input id="sourceUrl" name="sourceUrl" defaultValue={item?.sourceUrl ?? ""} placeholder="豆瓣、IMDb、TMDB 等条目页面 URL" />
         </div>
         <div className="space-y-3 md:col-span-3">
           <Label htmlFor="coverLocalPath">封面图片</Label>

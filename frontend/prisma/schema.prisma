@@ -36,6 +36,7 @@ model MediaItem {
   title          String
   originalTitle  String?
   coverLocalPath String?
+  sourceUrl      String?
   description    String?
   releaseYear    Int?
   genres         String       @default("[]")

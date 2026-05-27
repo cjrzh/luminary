@@ -20,6 +20,7 @@ export const itemInputSchema = z.object({
   title: z.string().trim().min(1, "标题不能为空"),
   originalTitle: optionalText,
   coverLocalPath: optionalText,
+  sourceUrl: optionalText,
   description: optionalText,
   releaseYear: optionalNumber.refine((value) => value === undefined || (Number.isInteger(value) && value >= 0 && value <= 9999), "年份无效"),
   genres: z.array(z.string().trim().min(1)).optional().default([]),

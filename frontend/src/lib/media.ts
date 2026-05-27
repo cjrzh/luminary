@@ -15,7 +15,7 @@ export const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
 export const WATCH_STATUS_LABELS: Record<WatchStatus, string> = {
   WANT: "想看",
   IN_PROGRESS: "在看",
-  COMPLETED: "已完成",
+  COMPLETED: "看过",
   DROPPED: "放弃",
   ON_HOLD: "搁置",
 };
@@ -26,7 +26,8 @@ export const PLEX_STATUS_LABELS: Record<PlexStatus, string> = {
 };
 
 export const mediaTypes = ["MOVIE", "TV", "VARIETY", "GAME", "ANIME", "MANGA", "BOOK"] as const;
-export const watchStatuses = ["WANT", "IN_PROGRESS", "COMPLETED", "DROPPED", "ON_HOLD"] as const;
+export const watchStatuses = ["WANT", "IN_PROGRESS", "COMPLETED"] as const;
+export const allWatchStatuses = ["WANT", "IN_PROGRESS", "COMPLETED", "DROPPED", "ON_HOLD"] as const;
 export const plexStatuses = ["IN_LIBRARY", "DELETED"] as const;
 
 export const statusClassName: Record<WatchStatus, string> = {

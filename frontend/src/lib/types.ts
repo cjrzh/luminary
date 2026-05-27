@@ -6,6 +6,7 @@ export type MediaItemView = {
   title: string;
   originalTitle: string | null;
   coverLocalPath: string | null;
+  sourceUrl: string | null;
   description: string | null;
   releaseYear: number | null;
   genres: string;
