@@ -1,4 +1,4 @@
-import { GamePurchaseStatus, MediaType, PlexStatus, Prisma, WatchStatus } from "@prisma/client";
+import { MediaType, PlexStatus, Prisma, WatchStatus } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
@@ -37,19 +37,6 @@ export const itemInputSchema = z.object({
   plexRatingKey: optionalText,
   plexStatus: z.nativeEnum(PlexStatus).optional().nullable(),
   plexSyncedAt: optionalDateText,
-  gamePurchaseStatus: z.nativeEnum(GamePurchaseStatus).optional().nullable(),
-  gamePrimaryPlatform: optionalText,
-  gameOwnedPlatforms: z.array(z.string().trim().min(1)).optional().default([]),
-  gameNormalPriceCny: optionalNumber.refine((value) => value === undefined || value >= 0, "游戏价格不能为负数"),
-  steamAppId: optionalText,
-  psnTitleId: optionalText,
-  psnConceptId: optionalText,
-  switchTitleId: optionalText,
-  playtimeForeverMinutes: optionalNumber.refine((value) => value === undefined || (Number.isInteger(value) && value >= 0), "总游玩时长必须是非负整数"),
-  playtime2WeeksMinutes: optionalNumber.refine((value) => value === undefined || (Number.isInteger(value) && value >= 0), "两周游玩时长必须是非负整数"),
-  lastPlayedAt: optionalDateText,
-  gameExternalIds: optionalText,
-  gameExtraData: optionalText,
   extraData: optionalText,
 });
 
@@ -80,86 +67,7 @@ function toDate(value: string | undefined) {
   return value ? new Date(value) : undefined;
 }
 
-function splitGameFields(input: ItemInput | ItemPatchInput) {
-  const {
-    gamePurchaseStatus,
-    gamePrimaryPlatform,
-    gameOwnedPlatforms,
-    gameNormalPriceCny,
-    steamAppId,
-    psnTitleId,
-    psnConceptId,
-    switchTitleId,
-    playtimeForeverMinutes,
-    playtime2WeeksMinutes,
-    lastPlayedAt,
-    gameExternalIds,
-    gameExtraData,
-    ...itemInput
-  } = input;
-
-  return {
-    itemInput,
-    gameInput: {
-      purchaseStatus: gamePurchaseStatus || null,
-      primaryPlatform: gamePrimaryPlatform,
-      ownedPlatforms: gameOwnedPlatforms,
-      normalPriceCny: gameNormalPriceCny,
-      steamAppId,
-      psnTitleId,
-      psnConceptId,
-      switchTitleId,
-      playtimeForeverMinutes,
-      playtime2WeeksMinutes,
-      lastPlayedAt,
-      externalIds: gameExternalIds,
-      extraData: gameExtraData,
-    },
-  };
-}
-
-function toGameProfileCreateData(input: ReturnType<typeof splitGameFields>["gameInput"]): Prisma.GameProfileCreateWithoutItemInput {
-  return {
-    purchaseStatus: input.purchaseStatus,
-    primaryPlatform: input.primaryPlatform,
-    ownedPlatforms: JSON.stringify(input.ownedPlatforms ?? []),
-    normalPriceCny: input.normalPriceCny,
-    steamAppId: input.steamAppId,
-    psnTitleId: input.psnTitleId,
-    psnConceptId: input.psnConceptId,
-    switchTitleId: input.switchTitleId,
-    playtimeForeverMinutes: input.playtimeForeverMinutes,
-    playtime2WeeksMinutes: input.playtime2WeeksMinutes,
-    lastPlayedAt: toDate(input.lastPlayedAt),
-    externalIds: input.externalIds,
-    extraData: input.extraData,
-  };
-}
-
-function toGameProfileUpdateData(input: ReturnType<typeof splitGameFields>["gameInput"]): Prisma.GameProfileUpdateWithoutItemInput {
-  const data: Prisma.GameProfileUpdateWithoutItemInput = {};
-  if (input.purchaseStatus !== undefined) data.purchaseStatus = input.purchaseStatus;
-  if (input.primaryPlatform !== undefined) data.primaryPlatform = input.primaryPlatform;
-  if (input.ownedPlatforms !== undefined) data.ownedPlatforms = JSON.stringify(input.ownedPlatforms);
-  if (input.normalPriceCny !== undefined) data.normalPriceCny = input.normalPriceCny;
-  if (input.steamAppId !== undefined) data.steamAppId = input.steamAppId;
-  if (input.psnTitleId !== undefined) data.psnTitleId = input.psnTitleId;
-  if (input.psnConceptId !== undefined) data.psnConceptId = input.psnConceptId;
-  if (input.switchTitleId !== undefined) data.switchTitleId = input.switchTitleId;
-  if (input.playtimeForeverMinutes !== undefined) data.playtimeForeverMinutes = input.playtimeForeverMinutes;
-  if (input.playtime2WeeksMinutes !== undefined) data.playtime2WeeksMinutes = input.playtime2WeeksMinutes;
-  if (input.lastPlayedAt !== undefined) data.lastPlayedAt = toDate(input.lastPlayedAt);
-  if (input.externalIds !== undefined) data.externalIds = input.externalIds;
-  if (input.extraData !== undefined) data.extraData = input.extraData;
-  return data;
-}
-
-function hasGameProfileInput(input: ReturnType<typeof splitGameFields>["gameInput"]) {
-  return Object.values(input).some((value) => value !== undefined && value !== null && (!Array.isArray(value) || value.length > 0));
-}
-
 export function toPrismaData(input: ItemInput): Prisma.MediaItemCreateInput {
-  const { gameInput } = splitGameFields(input);
   return {
     mediaType: input.mediaType,
     title: input.title,
@@ -183,26 +91,16 @@ export function toPrismaData(input: ItemInput): Prisma.MediaItemCreateInput {
     plexStatus: input.plexStatus || null,
     plexSyncedAt: toDate(input.plexSyncedAt),
     extraData: input.extraData,
-    ...(input.mediaType === MediaType.GAME ? { gameProfile: { create: toGameProfileCreateData(gameInput) } } : {}),
   };
 }
 
 export function toPrismaUpdateData(input: ItemPatchInput): Prisma.MediaItemUpdateInput {
-  const { itemInput, gameInput } = splitGameFields(input);
-  const { genres, watchedAt, plexSyncedAt, plexStatus, ...rest } = itemInput;
+  const { genres, watchedAt, plexSyncedAt, plexStatus, ...rest } = input;
   const data: Prisma.MediaItemUpdateInput = { ...rest };
   if (genres !== undefined) data.genres = JSON.stringify(genres);
   if (watchedAt !== undefined) data.watchedAt = toDate(watchedAt);
   if (plexSyncedAt !== undefined) data.plexSyncedAt = toDate(plexSyncedAt);
   if (plexStatus !== undefined) data.plexStatus = plexStatus || null;
-  if (itemInput.mediaType === MediaType.GAME || hasGameProfileInput(gameInput)) {
-    data.gameProfile = {
-      upsert: {
-        create: toGameProfileCreateData(gameInput),
-        update: toGameProfileUpdateData(gameInput),
-      },
-    };
-  }
   return data;
 }
 
@@ -247,7 +145,7 @@ export async function getItems(query: ItemListQuery) {
   const where = buildItemWhere(query);
 
   const [items, total] = await Promise.all([
-    prisma.mediaItem.findMany({ where, orderBy: { [sort]: order }, skip: (page - 1) * pageSize, take: pageSize, include: { gameProfile: true } }),
+    prisma.mediaItem.findMany({ where, orderBy: { [sort]: order }, skip: (page - 1) * pageSize, take: pageSize }),
     prisma.mediaItem.count({ where }),
   ]);
 

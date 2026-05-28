@@ -4,11 +4,21 @@ import { UserAccount } from "@/components/auth/user-account";
 import { Badge } from "@/components/ui/badge";
 import { prisma } from "@/lib/prisma";
 
+type CollectionSummary = {
+  id: string;
+  name: string;
+  description: string | null;
+  updatedAt: Date;
+  _count: { items: number };
+};
+
+export const dynamic = "force-dynamic";
+
 export default async function CollectionsPage() {
   const collections = await prisma.collection.findMany({
     orderBy: { updatedAt: "desc" },
     include: { _count: { select: { items: true } } },
-  });
+  }) as CollectionSummary[];
 
   return (
     <main className="min-h-screen bg-[#09090b] text-zinc-100">
@@ -29,7 +39,7 @@ export default async function CollectionsPage() {
       <section className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
         {collections.length ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {collections.map((collection) => (
+            {collections.map((collection: CollectionSummary) => (
               <Link key={collection.id} href={"/collections/" + collection.id} className="rounded-lg border border-white/10 bg-zinc-950/70 p-5 transition hover:border-amber-300/40 hover:bg-zinc-900">
                 <div className="flex items-start justify-between gap-3">
                   <h2 className="text-lg font-semibold text-zinc-50">{collection.name}</h2>

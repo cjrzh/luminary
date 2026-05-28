@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 
 type PageProps = { params: Promise<{ id: string }> };
 
+export const dynamic = "force-dynamic";
+
 export default async function EditCollectionPage({ params }: PageProps) {
   const { id } = await params;
   const collection = await prisma.collection.findUnique({ where: { id } });

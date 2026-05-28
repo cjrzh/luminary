@@ -23,15 +23,24 @@ export type MediaItemView = {
   plexRatingKey: string | null;
   plexStatus: PlexStatus | null;
   plexSyncedAt: string | null;
-  gameProfile: GameProfileView | null;
   extraData: string | null;
   createdAt: string;
   updatedAt: string;
 };
 
-export type GameProfileView = {
+export type GameItemView = {
   id: string;
-  itemId: string;
+  title: string;
+  originalTitle: string | null;
+  coverLocalPath: string | null;
+  sourceUrl: string | null;
+  description: string | null;
+  releaseYear: number | null;
+  genres: string;
+  status: WatchStatus;
+  myRating: number | null;
+  myReview: string | null;
+  playedAt: string | null;
   purchaseStatus: GamePurchaseStatus | null;
   primaryPlatform: string | null;
   ownedPlatforms: string;

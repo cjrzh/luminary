@@ -6,7 +6,7 @@ import { CheckCircle2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label, Select, Textarea } from "@/components/ui/field";
 import { PLEX_STATUS_LABELS, plexStatuses } from "@/lib/media";
-import type { MediaItemView } from "@/lib/types";
+import type { GameItemView, MediaItemView } from "@/lib/types";
 
 const ratingLabels = ["很差", "较差", "还行", "推荐", "力荐"];
 const normalStatusLabels: Record<"WANT" | "IN_PROGRESS" | "COMPLETED", string> = {
@@ -24,8 +24,8 @@ const visibleActionStatuses = ["IN_PROGRESS", "COMPLETED"] as const;
 
 type EditableStatus = (typeof editableStatuses)[number];
 
-function labelForStatus(item: MediaItemView, status: EditableStatus) {
-  return item.mediaType === "GAME" ? gameStatusLabels[status] : normalStatusLabels[status];
+function labelForStatus(kind: "media" | "game", status: EditableStatus) {
+  return kind === "game" ? gameStatusLabels[status] : normalStatusLabels[status];
 }
 
 function StarRatingControl({ value, onChange, compact = false }: { value: number; onChange: (value: number) => void; compact?: boolean }) {
@@ -74,14 +74,14 @@ function StarRatingDisplay({ value }: { value: number }) {
   );
 }
 
-export function ItemQuickEdit({ item }: { item: MediaItemView }) {
+export function ItemQuickEdit({ item, kind = "media" }: { item: MediaItemView | GameItemView; kind?: "media" | "game" }) {
   const router = useRouter();
   const initialStatus: EditableStatus = editableStatuses.includes(item.status as EditableStatus) ? item.status as EditableStatus : "WANT";
   const [dialogOpen, setDialogOpen] = useState(false);
   const [status, setStatus] = useState<EditableStatus>(initialStatus);
   const [rating, setRating] = useState(item.myRating ?? 0);
   const [review, setReview] = useState(item.myReview ?? "");
-  const [plexStatus, setPlexStatus] = useState(item.plexStatus ?? "");
+  const [plexStatus, setPlexStatus] = useState(kind === "media" ? (item as MediaItemView).plexStatus ?? "" : "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -98,15 +98,16 @@ export function ItemQuickEdit({ item }: { item: MediaItemView }) {
     setError(null);
     setSuccess(false);
 
-    const response = await fetch("/api/items/" + item.id, {
+    const response = await fetch((kind === "game" ? "/api/games/" : "/api/items/") + item.id, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         status,
-        plexStatus: item.mediaType === "GAME" ? null : plexStatus || null,
+        plexStatus: kind === "game" ? null : plexStatus || null,
         myRating: rating ? String(rating) : "",
         myReview: review,
-        watchedAt: status === "COMPLETED" ? new Date().toISOString().slice(0, 10) : item.watchedAt ?? "",
+        watchedAt: status === "COMPLETED" ? new Date().toISOString().slice(0, 10) : kind === "media" ? (item as MediaItemView).watchedAt ?? "" : "",
+        playedAt: status === "COMPLETED" ? new Date().toISOString().slice(0, 10) : kind === "game" ? (item as GameItemView).playedAt ?? "" : "",
       }),
     });
 
@@ -134,7 +135,7 @@ export function ItemQuickEdit({ item }: { item: MediaItemView }) {
               onClick={() => openReviewDialog(nextStatus)}
               className={(status === nextStatus ? "border-amber-300 bg-amber-300 text-zinc-950" : "border-amber-300/40 bg-amber-400/10 text-amber-100 hover:bg-amber-400/20") + " rounded-md border px-4 py-2 text-sm font-medium transition"}
             >
-              {labelForStatus(item, nextStatus)}
+              {labelForStatus(kind, nextStatus)}
             </button>
           ))}
           <span className="ml-0 text-sm text-zinc-500 sm:ml-2">评价：</span>
@@ -149,7 +150,7 @@ export function ItemQuickEdit({ item }: { item: MediaItemView }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
           <div className="w-full max-w-2xl rounded-lg border border-white/10 bg-zinc-950 shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 bg-emerald-500/10 px-5 py-4">
-              <h3 className="text-lg font-semibold text-emerald-100">添加收藏：{labelForStatus(item, status)}这部{item.mediaType === "GAME" ? "游戏" : "作品"}</h3>
+              <h3 className="text-lg font-semibold text-emerald-100">添加收藏：{labelForStatus(kind, status)}这部{kind === "game" ? "游戏" : "作品"}</h3>
               <Button variant="ghost" onClick={() => setDialogOpen(false)} aria-label="关闭"><X size={18} /></Button>
             </div>
             <div className="space-y-5 p-5">
@@ -157,10 +158,10 @@ export function ItemQuickEdit({ item }: { item: MediaItemView }) {
                 <div className="space-y-2">
                   <Label htmlFor="review-status">状态</Label>
                   <Select id="review-status" value={status} onChange={(event) => setStatus(event.target.value as EditableStatus)}>
-                    {editableStatuses.map((nextStatus) => <option key={nextStatus} value={nextStatus}>{labelForStatus(item, nextStatus)}</option>)}
+                    {editableStatuses.map((nextStatus) => <option key={nextStatus} value={nextStatus}>{labelForStatus(kind, nextStatus)}</option>)}
                   </Select>
                 </div>
-                {item.mediaType !== "GAME" ? (
+                {kind === "media" ? (
                   <div className="space-y-2">
                     <Label htmlFor="review-plex-status">Plex 状态</Label>
                     <Select id="review-plex-status" value={plexStatus} onChange={(event) => setPlexStatus(event.target.value)}>

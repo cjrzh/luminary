@@ -11,7 +11,6 @@ enum MediaType {
   MOVIE
   TV
   VARIETY
-  GAME
   ANIME
   MANGA
   BOOK
@@ -64,7 +63,6 @@ model MediaItem {
   activityLogs   ActivityLog[]
   downloadTasks  DownloadTask[]
   collections    CollectionItem[]
-  gameProfile    GameProfile?
 
   @@index([mediaType])
   @@index([status])
@@ -73,9 +71,19 @@ model MediaItem {
   @@index([createdAt])
 }
 
-model GameProfile {
+model GameItem {
   id                     String              @id @default(cuid())
-  itemId                 String              @unique
+  title                  String
+  originalTitle          String?
+  coverLocalPath         String?
+  sourceUrl              String?
+  description            String?
+  releaseYear            Int?
+  genres                 String              @default("[]")
+  status                 WatchStatus
+  myRating               Float?
+  myReview               String?
+  playedAt               DateTime?
   purchaseStatus         GamePurchaseStatus?
   primaryPlatform        String?
   ownedPlatforms         String              @default("[]")
@@ -91,8 +99,10 @@ model GameProfile {
   extraData              String?
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
-  item                   MediaItem           @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
+  @@index([status])
+  @@index([releaseYear])
+  @@index([createdAt])
   @@index([steamAppId])
   @@index([psnTitleId])
   @@index([switchTitleId])

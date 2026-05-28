@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { MediaItem } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { UserAccount } from "@/components/auth/user-account";
@@ -11,11 +12,15 @@ import { prisma } from "@/lib/prisma";
 import { serializeItem } from "@/lib/serialize";
 
 type PageProps = { params: Promise<{ id: string }> };
+type CollectionEntry = {
+  id: string;
+  itemId: string;
+  item: MediaItem;
+};
+
+export const dynamic = "force-dynamic";
 
 function statusLabel(item: { mediaType: string; status: string }) {
-  if (item.mediaType === "GAME" && item.status === "WANT") return "想玩";
-  if (item.mediaType === "GAME" && item.status === "IN_PROGRESS") return "在玩";
-  if (item.mediaType === "GAME" && item.status === "COMPLETED") return "玩过";
   return WATCH_STATUS_LABELS[item.status as keyof typeof WATCH_STATUS_LABELS];
 }
 
@@ -28,7 +33,7 @@ export default async function CollectionDetailPage({ params }: PageProps) {
 
   if (!collection) notFound();
 
-  const includedIds = new Set(collection.items.map((entry) => entry.itemId));
+  const includedIds = new Set((collection.items as CollectionEntry[]).map((entry) => entry.itemId));
   const availableItems = await prisma.mediaItem.findMany({
     where: { id: { notIn: Array.from(includedIds) } },
     orderBy: [{ title: "asc" }],
@@ -67,12 +72,12 @@ export default async function CollectionDetailPage({ params }: PageProps) {
 
         <section className="space-y-3">
           {collection.items.length ? (
-            collection.items.map((entry, index) => {
+            (collection.items as CollectionEntry[]).map((entry, index) => {
               const item = serializeItem(entry.item);
               return (
                 <article key={entry.id} className="grid gap-4 rounded-lg border border-white/10 bg-zinc-950/70 p-3 transition hover:border-amber-300/30 hover:bg-zinc-900 md:grid-cols-[44px_72px_1fr_auto] md:items-center">
                   <div className="flex h-10 w-10 items-center justify-center rounded-md bg-white/5 text-sm font-semibold text-amber-200">{index + 1}</div>
-                  <Link href={"/items/" + item.id} className="block aspect-[2/3] w-20 overflow-hidden rounded-md border border-white/10 bg-zinc-950 md:w-[72px]">
+                  <Link href={"/media/" + item.id} className="block aspect-[2/3] w-20 overflow-hidden rounded-md border border-white/10 bg-zinc-950 md:w-[72px]">
                     {item.coverLocalPath ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={item.coverLocalPath} alt={item.title} className="h-full w-full object-cover" />
@@ -81,7 +86,7 @@ export default async function CollectionDetailPage({ params }: PageProps) {
                     )}
                   </Link>
                   <div className="min-w-0">
-                    <Link href={"/items/" + item.id} className="line-clamp-1 text-base font-semibold text-zinc-50 hover:text-amber-200">{item.title}</Link>
+                    <Link href={"/media/" + item.id} className="line-clamp-1 text-base font-semibold text-zinc-50 hover:text-amber-200">{item.title}</Link>
                     {item.originalTitle ? <p className="mt-1 line-clamp-1 text-sm text-zinc-500">{item.originalTitle}</p> : null}
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <Badge className="border-white/10 bg-white/5 text-zinc-300">{MEDIA_TYPE_LABELS[item.mediaType]}</Badge>
